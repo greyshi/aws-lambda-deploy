@@ -387,6 +387,125 @@ describe('S3 Bucket Operations Tests', () => {
     });
   });
   
+  describe('uploadToS3 error handling', () => {
+    test('should handle NoSuchBucket error', async () => {
+      fs.readFile.mockResolvedValue(Buffer.from('test file content'));
+      fs.access.mockResolvedValue(undefined);
+      
+      const noSuchBucketError = new Error('No such bucket');
+      noSuchBucketError.code = 'NoSuchBucket';
+      
+      mockS3Send.mockRejectedValueOnce(noSuchBucketError);
+      
+      await expect(mainModule.uploadToS3(
+        '/path/to/file.zip',
+        'non-existent-bucket',
+        'key.zip',
+        'us-east-1'
+      )).rejects.toThrow('No such bucket');
+      
+      expect(core.error).toHaveBeenCalledWith('Bucket non-existent-bucket does not exist and could not be created automatically. Please create it manually or check your permissions.');
+    });
+    
+    test('should handle AccessDenied error with code', async () => {
+      fs.readFile.mockResolvedValue(Buffer.from('test file content'));
+      fs.access.mockResolvedValue(undefined);
+      
+      const accessDeniedError = new Error('Access denied');
+      accessDeniedError.code = 'AccessDenied';
+      
+      mockS3Send.mockRejectedValueOnce(accessDeniedError);
+      
+      await expect(mainModule.uploadToS3(
+        '/path/to/file.zip',
+        'test-bucket',
+        'key.zip',
+        'us-east-1'
+      )).rejects.toThrow('Access denied');
+      
+      expect(core.error).toHaveBeenCalledWith('Access denied. Ensure your AWS credentials have the following permissions:');
+      expect(core.error).toHaveBeenCalledWith('- s3:HeadBucket (to check if the bucket exists)');
+      expect(core.error).toHaveBeenCalledWith('- s3:CreateBucket (to create the bucket if it doesn\'t exist)');
+      expect(core.error).toHaveBeenCalledWith('- s3:PutObject (to upload the file to the bucket)');
+      expect(core.error).toHaveBeenCalledWith('See s3-troubleshooting.md for a complete IAM policy template.');
+    });
+    
+    test('should handle AccessDenied error with name', async () => {
+      fs.readFile.mockResolvedValue(Buffer.from('test file content'));
+      fs.access.mockResolvedValue(undefined);
+      
+      const accessDeniedError = new Error('Access denied');
+      accessDeniedError.name = 'AccessDenied';
+      
+      mockS3Send.mockRejectedValueOnce(accessDeniedError);
+      
+      await expect(mainModule.uploadToS3(
+        '/path/to/file.zip',
+        'test-bucket',
+        'key.zip',
+        'us-east-1'
+      )).rejects.toThrow('Access denied');
+      
+      expect(core.error).toHaveBeenCalledWith('Access denied. Ensure your AWS credentials have the following permissions:');
+    });
+    
+    test('should handle AccessDenied error with 403 status code', async () => {
+      fs.readFile.mockResolvedValue(Buffer.from('test file content'));
+      fs.access.mockResolvedValue(undefined);
+      
+      const accessDeniedError = new Error('Access denied');
+      accessDeniedError.$metadata = { httpStatusCode: 403 };
+      
+      mockS3Send.mockRejectedValueOnce(accessDeniedError);
+      
+      await expect(mainModule.uploadToS3(
+        '/path/to/file.zip',
+        'test-bucket',
+        'key.zip',
+        'us-east-1'
+      )).rejects.toThrow('Access denied');
+    });
+    
+    test('should handle CredentialsProviderError', async () => {
+      fs.readFile.mockResolvedValue(Buffer.from('test file content'));
+      fs.access.mockResolvedValue(undefined);
+      
+      const credentialsError = new Error('Credentials not found');
+      credentialsError.name = 'CredentialsProviderError';
+      
+      mockS3Send.mockRejectedValueOnce(credentialsError);
+      
+      await expect(mainModule.uploadToS3(
+        '/path/to/file.zip',
+        'test-bucket',
+        'key.zip',
+        'us-east-1'
+      )).rejects.toThrow('Credentials not found');
+      
+      expect(core.error).toHaveBeenCalledWith('AWS credentials not found or invalid. Check your AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables.');
+    });
+    
+    test('should handle InvalidBucketName error', async () => {
+      fs.readFile.mockResolvedValue(Buffer.from('test file content'));
+      fs.access.mockResolvedValue(undefined);
+      
+      const invalidBucketError = new Error('Invalid bucket name');
+      invalidBucketError.name = 'InvalidBucketName';
+      
+      mockS3Send.mockRejectedValueOnce(invalidBucketError);
+      
+      await expect(mainModule.uploadToS3(
+        '/path/to/file.zip',
+        'Invalid_Bucket_Name',
+        'key.zip',
+        'us-east-1'
+      )).rejects.toThrow('Invalid bucket name');
+      
+      expect(core.error).toHaveBeenCalledWith('Invalid bucket name: Invalid_Bucket_Name. Bucket names must follow S3 naming rules.');
+      expect(core.error).toHaveBeenCalledWith('See s3-troubleshooting.md for S3 bucket naming rules.');
+    });
+  });
+  
   describe('End-to-End S3 Deployment Flow', () => {
     let originalRun;
     beforeAll(() => {

@@ -14,7 +14,7 @@ jest.mock('path');
 jest.mock('os');
 jest.mock('../validations');
 
-describe('Package Code Artifacts Tests', () => { 
+describe('Package Artifacts Tests', () => { 
   const mockTimestamp = 1234567890;
   beforeEach(() => {
     jest.resetAllMocks();

@@ -7,13 +7,13 @@ Updates the code and configuration of AWS Lambda functions
 <!-- toc -->
 
 - [Usage](#usage)
+  * [Update Function Configuration](#update-configuration-only)
   * [Using S3 Deployment Method](#using-s3-deployment-method)
-  * [Update Configuration Only](#update-configuration-only)
   * [Dry Run Mode](#dry-run-mode)
+- [Build from Source](#build-from-source)
 - [Inputs](#inputs)
 - [Outputs](#outputs)
 - [Credentials and Region](#credentials-and-region)
-  * [OpenID Connect (OIDC) - Recommended Approach](#openid-connect-oidc---recommended-approach)
 - [Permissions](#permissions)
 - [License Summary](#license-summary)
 - [Security Disclosures](#security-disclosures)
@@ -23,124 +23,142 @@ Updates the code and configuration of AWS Lambda functions
 ## Usage
 
 ```yaml
-name: Deploy Lambda Function
+name: Deploy to AWS Lambda
 
 on:
   push:
-    branches: [main, master]
+    branches: [ "main" ]
+
+permissions:
+  id-token: write   # This is required for OIDC authentication
+  contents: read    # This is required to checkout the repository
 
 jobs:
   deploy:
+    name: Deploy
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Required for OIDC authentication
-      contents: read  # Required to check out the repository
+    environment: production
+
     steps:
-      - uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionRole      
-      - name: Deploy Lambda function
-        uses: aws-actions/amazon-lambda-deploy@v1
-        with:
-          function-name: my-lambda-function
-          code-artifacts-dir: ./dist
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v3
+      with:
+        role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+        aws-region: ${{ env.AWS_REGION }}
+        # The role-to-assume should be the ARN of the IAM role you created for GitHub Actions OIDC
+
+    - name: Deploy Lambda Function
+      uses: aws-actions/aws-lambda-deploy@v1
+      with:
+        function-name: my-function-name
+        code-artifacts-dir: my-code-artifacts-dir
+        # handler: my-handler
+        # runtime: my-runtime
+        # Add any additional inputs your action supports
 ```
 
-### Using S3 Deployment Method
+The required parameters to deploy are function name, code artifacts directory, handler, and runtime. The function name and code artifacts directory need to be provided by the user. However, the handler and runtime do not and will default to index.handler and nodejs20.x if not provided.
+
+### Update Function Configuration
 
 ```yaml
-name: Deploy Lambda Function with S3
-
-on:
-  push:
-    branches: [main, master]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Required for OIDC authentication
-      contents: read  # Required to check out the repository
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials with OIDC
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionRole
-      
-      - name: Deploy Lambda function via S3
-        uses: aws-actions/amazon-lambda-deploy@v1
-        with:
-          function-name: my-lambda-function
-          code-artifacts-dir: ./dist
-          s3-bucket: my-lambda-deployment-bucket
-          # s3-key is optional - a key will be auto-generated if not specified
-```
-
-### Update Configuration Only
-
-```yaml
-name: Update Lambda Configuration
-
-on:
-  push:
-    branches: [main, master]
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Required for OIDC authentication
-      contents: read  # Required to check out the repository
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials with OIDC
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionRole      
       - name: Update Lambda configuration
-        uses: aws-actions/amazon-lambda-deploy@v1
+        uses: aws-actions/aws-lambda-deploy@v1
         with:
-          function-name: my-lambda-function
-          code-artifacts-dir: ./dist
+          function-name: my-function-name
+          code-artifacts-dir: my-code-artifacts-dir
           memory-size: 512
           timeout: 60
           environment: '{"ENV":"production","DEBUG":"true"}'
 ```
 
+### Using S3 Deployment Method
+
+```yaml
+      - name: Deploy Lambda function via S3
+        uses: aws-actions/aws-lambda-deploy@v1
+        with:
+          function-name: my-function-name
+          code-artifacts-dir: my-code-artifacts-dir
+          s3-bucket: my-s3-bucket
+          # s3-key is optional - a key will be auto-generated if not specified
+```
+
 ### Dry Run Mode
 
 ```yaml
-name: Validate Lambda Deployment
-
-on:
-  pull_request:
-    branches: [main, master]
-
-jobs:
-  validate:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Required for OIDC authentication
-      contents: read  # Required to check out the repository
-    steps:
-      - uses: actions/checkout@v3
-      
-      - name: Configure AWS credentials with OIDC
-        uses: aws-actions/configure-aws-credentials@v2
+      - name: Deploy on dry run mode
+        uses: aws-actions/aws-lambda-deploy@v1
         with:
-          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionRole      
-      - name: Validate Lambda deployment (no changes)
-        uses: aws-actions/amazon-lambda-deploy@v1
-        with:
-          function-name: my-lambda-function
-          code-artifacts-dir: ./dist
+          function-name: my-function-name
+          code-artifacts-dir: my-code-artifacts-dir
           dry-run: true
+```
+## Build from Source
+
+To automate building your source code, add the step that corresponds to your runtime:
+
+### Node.js
+
+```yaml
+      - name: Build source code
+        run: |
+          # Install dependencies
+          npm ci
+
+          # Build 
+          npm run build
+```
+### Python
+
+```yaml
+      - name: Build source code using setup tools
+        run: |
+          # Install dependencies
+          pip install -r requirement.txt
+          
+          # Build
+          python -m build
+```
+
+### Ruby
+
+```yaml
+      - name: Build source code using Rake
+        run: |
+          # Install dependencies
+          bundle install
+          
+          # Build
+          bundle exec rake [task_name]
+```
+
+### Java
+
+```yaml
+      - name: Build source code using Maven
+        run: |
+          # Install dependencies
+          mvn dependency:resolve clean install -DskipTests
+          
+          # Build
+          mvn clean package
+
+```
+### .NET
+
+```yaml
+      - name: Build source code
+        run: |
+          # Install dependencies
+          dotnet restore
+          
+          # Build
+          dotnet build
+
 ```
 
 ## Inputs
@@ -187,32 +205,17 @@ jobs:
 
 This action relies on the [default behavior of the AWS SDK for JavaScript](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-credentials-node.html) to determine AWS credentials and region. Use the [aws-actions/configure-aws-credentials](https://github.com/aws-actions/configure-aws-credentials) action to configure the GitHub Actions environment for AWS authentication.
 
-### OpenID Connect (OIDC) - Recommended Approach
+### OpenID Connect (OIDC) 
 
 We **highly recommend** using OpenID Connect (OIDC) to authenticate with AWS. OIDC allows your GitHub Actions workflows to access AWS resources without storing AWS credentials as long-lived GitHub secrets.
 
 Here's an example of using OIDC with the aws-actions/configure-aws-credentials action:
 
 ```yaml
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write # Required for OIDC authentication
-      contents: read  # Required to check out the repository
-    steps:
-      - uses: actions/checkout@v3
-      
       - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
           role-to-assume: arn:aws:iam::123456789012:role/GitHubActionRole
-      
-      - name: Deploy Lambda function
-        uses: aws-actions/amazon-lambda-deploy@v1
-        with:
-          function-name: my-lambda-function
-          code-artifacts-dir: ./dist
 ```
 
 To use OIDC authentication, you must configure a trust policy in AWS IAM that allows GitHub Actions to assume an IAM role. Here's an example trust policy:
