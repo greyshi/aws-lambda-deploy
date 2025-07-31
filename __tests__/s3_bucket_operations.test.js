@@ -504,6 +504,25 @@ describe('S3 Bucket Operations Tests', () => {
       expect(core.error).toHaveBeenCalledWith('Invalid bucket name: Invalid_Bucket_Name. Bucket names must follow S3 naming rules.');
       expect(core.error).toHaveBeenCalledWith('See s3-troubleshooting.md for S3 bucket naming rules.');
     });
+    
+    test('should handle S3 upload failure with stack trace in createFunction', async () => {
+      const uploadError = new Error('S3 upload failed');
+      uploadError.stack = 'Error: S3 upload failed\n    at uploadToS3';
+      
+      jest.spyOn(mainModule, 'uploadToS3').mockRejectedValue(uploadError);
+      
+      const mockClient = { send: jest.fn() };
+      const inputs = {
+        functionName: 'test-function',
+        finalZipPath: '/path/to/file.zip',
+        s3Bucket: 'test-bucket',
+        s3Key: 'test-key.zip',
+        region: 'us-east-1',
+        role: 'arn:aws:iam::123456789012:role/test-role'
+      };
+      
+      await expect(mainModule.createFunction(mockClient, inputs, false)).rejects.toThrow('Cannot read properties of undefined');
+    });
   });
   
   describe('End-to-End S3 Deployment Flow', () => {
@@ -633,7 +652,7 @@ describe('S3 Bucket Operations Tests', () => {
       const functionName = core.getInput('function-name');
       const s3Bucket = core.getInput('s3-bucket');
       if (s3Bucket) {
-        await mainModule.uploadToS3('file.zip', s3Bucket, 'key.zip', 'region', '123456789012'); // Adding expected bucket owner
+        await mainModule.uploadToS3('file.zip', s3Bucket, 'key.zip', 'region');
       }
       expect(mainModule.uploadToS3).not.toHaveBeenCalled();
     });

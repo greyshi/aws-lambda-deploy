@@ -14,7 +14,7 @@ jest.mock('path');
 describe('Dry Run Mode Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    process.env.AWS_REGION = 'us-east-1';
+    process.env.WS_REGION = 'us-east-1';
   });
 
   test('should skip configuration updates in dry run mode when config changed', async () => {
