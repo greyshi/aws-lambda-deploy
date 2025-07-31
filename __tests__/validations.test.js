@@ -1,6 +1,8 @@
 const core = require('@actions/core');
 const { validateAndResolvePath } = require('../validations');
 const originalValidations = jest.requireActual('../validations');
+const index = require('../index');
+const validations = require('../validations');
 
 jest.mock('@actions/core');
 jest.mock('../validations', () => {
@@ -352,6 +354,20 @@ describe('Validations Tests', () => {
         core.getInput.mockImplementation((name) => {
           if (name === 'kms-key-arn') return 'invalid:kms:key:arn';
           if (name === 'source-kms-key-arn') return 'invalid:kms:key:arn'
+          if (name === 'function-name') return 'test-function';
+          if (name === 'region') return 'us-east-1';
+          if (name === 'code-artifacts-dir') return './artifacts';
+          return '';
+        });
+        const result = originalValidations.validateAllInputs();
+        expect(result.valid).toBe(false);
+        expect(core.setFailed).toHaveBeenCalledWith(
+          expect.stringContaining('Invalid KMS key ARN format')
+        );
+      });
+      test('should reject invalid source-kms-key-arn format', () => {
+        core.getInput.mockImplementation((name) => {
+          if (name === 'source-kms-key-arn') return 'invalid:source:kms:arn';
           if (name === 'function-name') return 'test-function';
           if (name === 'region') return 'us-east-1';
           if (name === 'code-artifacts-dir') return './artifacts';
@@ -1142,6 +1158,65 @@ describe('Validations Tests', () => {
         );
       });
     });
+    describe('image-config validation', () => {
+      test('should accept valid image-config', () => {
+        const mockGetInput = jest.fn((name) => {
+          if (name === 'image-config') {
+            return '{"EntryPoint":["/app/entrypoint.sh"],"Command":["handler"]}';
+          }
+          const inputs = {
+            'function-name': 'test-function',
+            'region': 'us-east-1',
+            'code-artifacts-dir': './test-dir'
+          };
+          return inputs[name] || '';
+        });
+        core.getInput = mockGetInput;
+        const result = originalValidations.validateAllInputs();
+        expect(result.valid).toBe(true);
+        expect(result.parsedImageConfig).toEqual({
+          EntryPoint: ['/app/entrypoint.sh'],
+          Command: ['handler']
+        });
+        expect(core.setFailed).not.toHaveBeenCalled();
+      });
+    });
+    describe('logging-config validation', () => {
+      test('should accept valid logging-config', () => {
+        const mockGetInput = jest.fn((name) => {
+          if (name === 'logging-config') {
+            return '{"LogFormat":"JSON","ApplicationLogLevel":"INFO"}';
+          }
+          const inputs = {
+            'function-name': 'test-function',
+            'region': 'us-east-1',
+            'code-artifacts-dir': './test-dir'
+          };
+          return inputs[name] || '';
+        });
+        core.getInput = mockGetInput;
+        const result = originalValidations.validateAllInputs();
+        expect(result.valid).toBe(true);
+        expect(result.parsedLoggingConfig).toEqual({
+          LogFormat: 'JSON',
+          ApplicationLogLevel: 'INFO'
+        });
+        expect(core.setFailed).not.toHaveBeenCalled();
+      });
+    });
+  });
+  describe('getAdditionalInputs function', () => {
+    test('should handle invalid publish input and default to false', () => {
+      const mockGetBooleanInput = jest.fn((name) => {
+        if (name === 'publish') {
+          throw new Error('Invalid boolean input');
+        }
+        return false;
+      });
+      core.getBooleanInput = mockGetBooleanInput;
+      const result = originalValidations.getAdditionalInputs();
+      expect(result.publish).toBe(false);
+    });
   });
   describe('validateAndResolvePath function', () => {
     let originalPlatform;
@@ -1254,6 +1329,23 @@ describe('Validations Tests', () => {
       const result = validateAndResolvePath(absolutePath, basePath);
       expect(result).toBe('/base/path/file.js');
     });
+  });
+  describe('Early Return on Invalid Inputs', () => {
+    test('run should return early when validations fail', async () => {
+      const mockValidateAllInputs = jest.fn().mockReturnValue({ valid: false });
+      const originalValidateAllInputs = validations.validateAllInputs;
+      validations.validateAllInputs = mockValidateAllInputs;
+      
+      const coreSpy = jest.spyOn(require('@actions/core'), 'info');
+      
+      await index.run();
+      
+      expect(mockValidateAllInputs).toHaveBeenCalledTimes(1);
+      expect(coreSpy).not.toHaveBeenCalledWith(expect.stringMatching(/Creating Lambda function with deployment package/));
+      
+      validations.validateAllInputs = originalValidateAllInputs;
+    });
+
   });
 });
 
