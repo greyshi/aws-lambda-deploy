@@ -99,7 +99,7 @@ The required parameters to deploy are function name, code artifacts directory, h
 ```
 ## Build from Source
 
-To automate building your source code, add the step that corresponds to your runtime:
+To automate building your source code, add a build step based on your runtime and build process. Below are two commonly used examples for Node.js and Python:
 
 ### Node.js
 
@@ -122,43 +122,6 @@ To automate building your source code, add the step that corresponds to your run
           
           # Build
           python -m build
-```
-
-### Ruby
-
-```yaml
-      - name: Build source code using Rake
-        run: |
-          # Install dependencies
-          bundle install
-          
-          # Build
-          bundle exec rake [task_name]
-```
-
-### Java
-
-```yaml
-      - name: Build source code using Maven
-        run: |
-          # Install dependencies
-          mvn dependency:resolve clean install -DskipTests
-          
-          # Build
-          mvn clean package
-
-```
-### .NET
-
-```yaml
-      - name: Build source code
-        run: |
-          # Install dependencies
-          dotnet restore
-          
-          # Build
-          dotnet build
-
 ```
 
 ## Inputs
