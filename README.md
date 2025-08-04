@@ -1,13 +1,13 @@
-# AWS Lambda "Deploy Lambda Function" Action for GitHub Actions
+# AWS Lambda Deploy Action for GitHub Actions
 
-Updates the code and configuration of AWS Lambda functions
+Updates the code and configuration of AWS Lambda functions as part of GitHub Actions workflow steps.
 
 **Table of Contents**
 
 <!-- toc -->
 
 - [Usage](#usage)
-  * [Update Function Configuration](#update-configuration-only)
+  * [Update Function Configuration](#update-function-configuration)
   * [Using S3 Deployment Method](#using-s3-deployment-method)
   * [Dry Run Mode](#dry-run-mode)
 - [Build from Source](#build-from-source)
@@ -57,13 +57,19 @@ jobs:
         code-artifacts-dir: my-code-artifacts-dir
         # handler: my-handler
         # runtime: my-runtime
-        # Add any additional inputs your action supports
+        # Add any additional inputs this action supports
 ```
 
-The required parameters to deploy are function name, code artifacts directory, handler, and runtime. The function name and code artifacts directory need to be provided by the user. However, the handler and runtime do not and will default to index.handler and nodejs20.x if not provided.
+The required parameters to deploy are `function-name` and `code-artifacts-dir`. If a function with the name specified by `function-name` does not exist, it will be created with the provided code within `code-artifacts-dir` and configuration parameters using the [CreateFunction](https://docs.aws.amazon.com/lambda/latest/api/API_CreateFunction.html) API.
+
+Handler and runtime default to index.handler and nodejs20.x but can be customized. For the full list of inputs this GitHub Action supports, see [Inputs](#inputs).
+
+
 
 ### Update Function Configuration
+Function configuration will be updated using the [UpdateFunctionConfiguration](https://docs.aws.amazon.com/lambda/latest/api/API_UpdateFunctionConfiguration.html) API if configuration values differ from the deployed Lambda function's configuration.
 
+As a first step, [GetFunctionConfiguration](https://docs.aws.amazon.com/lambda/latest/api/API_GetFunctionConfiguration.html) is called to perform a diff between the provided configuration parameters and the configuration of the currently deployed function. If there is no change, UpdateFunctionConfiguration will not be called.
 ```yaml
       - name: Update Lambda configuration
         uses: aws-actions/aws-lambda-deploy@v1
@@ -76,7 +82,7 @@ The required parameters to deploy are function name, code artifacts directory, h
 ```
 
 ### Using S3 Deployment Method
-
+Optionally store code artifacts in S3 instead of direct `.zip` file upload.
 ```yaml
       - name: Deploy Lambda function via S3
         uses: aws-actions/aws-lambda-deploy@v1
@@ -88,7 +94,7 @@ The required parameters to deploy are function name, code artifacts directory, h
 ```
 
 ### Dry Run Mode
-
+Validate parameters and permissions without any function code or configuration modifications.
 ```yaml
       - name: Deploy on dry run mode
         uses: aws-actions/aws-lambda-deploy@v1
@@ -99,7 +105,9 @@ The required parameters to deploy are function name, code artifacts directory, h
 ```
 ## Build from Source
 
-To automate building your source code, add a build step based on your runtime and build process. Below are two commonly used examples for Node.js and Python:
+To automate building your source code, add a build step based on your runtime and build process. This build step should be performed before the AWS Lambda Deploy step, and AWS Lambda Deploy's `code-artifacts-dir` parameter will typically be set to the build step's code artifact output directory.
+
+Below are two commonly used Build examples for Node.js and Python:
 
 ### Node.js
 
@@ -109,7 +117,7 @@ To automate building your source code, add a build step based on your runtime an
           # Install dependencies
           npm ci
 
-          # Build 
+          # Build
           npm run build
 ```
 ### Python
@@ -119,7 +127,7 @@ To automate building your source code, add a build step based on your runtime an
         run: |
           # Install dependencies
           pip install -r requirement.txt
-          
+
           # Build
           python -m build
 ```
@@ -168,7 +176,7 @@ To automate building your source code, add a build step based on your runtime an
 
 This action relies on the [default behavior of the AWS SDK for JavaScript](https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/setting-credentials-node.html) to determine AWS credentials and region. Use the [aws-actions/configure-aws-credentials](https://github.com/aws-actions/configure-aws-credentials) action to configure the GitHub Actions environment for AWS authentication.
 
-### OpenID Connect (OIDC) 
+### OpenID Connect (OIDC)
 
 We **highly recommend** using OpenID Connect (OIDC) to authenticate with AWS. OIDC allows your GitHub Actions workflows to access AWS resources without storing AWS credentials as long-lived GitHub secrets.
 
