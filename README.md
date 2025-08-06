@@ -186,7 +186,8 @@ Here's an example of using OIDC with the aws-actions/configure-aws-credentials a
       - name: Configure AWS credentials with OIDC
         uses: aws-actions/configure-aws-credentials@v2
         with:
-          role-to-assume: arn:aws:iam::123456789012:role/GitHubActionRole
+          role-to-assume: my-role
+          aws-region: my-region
 ```
 
 To use OIDC authentication, you must configure a trust policy in AWS IAM that allows GitHub Actions to assume an IAM role. Here's an example trust policy:
