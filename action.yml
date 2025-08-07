@@ -1,5 +1,5 @@
 name: GitHub Action for Lambda Function Deployment
-description: This action updates the code and configuration of the Lambda function provided by the user. If the function does not exist, a new one will be created.
+description: Updates the code and configuration of AWS Lambda functions. If the function does not exist, a new one will be created.
 inputs:
   function-name:
     description: 'Name of the Lambda function.'
