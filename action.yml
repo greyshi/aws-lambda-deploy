@@ -1,4 +1,4 @@
-name: AWS Lambda Deploy
+name: AWS Lambda Deploy Action
 description: Updates the code and configuration of AWS Lambda functions. If the function does not exist, a new one will be created.
 inputs:
   function-name:
