@@ -1,4 +1,4 @@
-name: GitHub Action for Lambda Function Deployment
+name: AWS Lambda Deploy
 description: Updates the code and configuration of AWS Lambda functions. If the function does not exist, a new one will be created.
 inputs:
   function-name:
