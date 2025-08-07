@@ -55,16 +55,16 @@ jobs:
       with:
         function-name: my-function-name
         code-artifacts-dir: my-code-artifacts-dir
-        # handler: my-handler
-        # runtime: my-runtime
+        handler: index.handler
+        runtime: nodejs22.x
         # Add any additional inputs this action supports
 ```
 
-The required parameters to deploy are `function-name` and `code-artifacts-dir`. If a function with the name specified by `function-name` does not exist, it will be created with the provided code within `code-artifacts-dir` and configuration parameters using the [CreateFunction](https://docs.aws.amazon.com/lambda/latest/api/API_CreateFunction.html) API.
+The required parameters to deploy are `function-name`, `code-artifacts-dir`, `handler`, and `runtime`. If the function does not exist yet, the `role` parameter is also required to specify the function's IAM execution role.
 
-Handler and runtime default to index.handler and nodejs20.x but can be customized. For the full list of inputs this GitHub Action supports, see [Inputs](#inputs).
+If a function with the name specified by `function-name` does not exist, it will be created with the provided code within `code-artifacts-dir` and configuration parameters using the [CreateFunction](https://docs.aws.amazon.com/lambda/latest/api/API_CreateFunction.html) API.
 
-
+For the full list of inputs this GitHub Action supports, see [Inputs](#inputs).
 
 ### Update Function Configuration
 Function configuration will be updated using the [UpdateFunctionConfiguration](https://docs.aws.amazon.com/lambda/latest/api/API_UpdateFunctionConfiguration.html) API if configuration values differ from the deployed Lambda function's configuration.
@@ -229,13 +229,23 @@ This action requires the following minimum set of permissions:
       "Sid": "LambdaDeployPermissions",
       "Effect": "Allow",
       "Action": [
-        "lambda:GetFunction",
+        "lambda:GetFunctionConfiguration",
         "lambda:CreateFunction",
         "lambda:UpdateFunctionCode",
         "lambda:UpdateFunctionConfiguration",
         "lambda:PublishVersion"
       ],
       "Resource": "arn:aws:lambda:<region>:<aws_account_id>:function:<function_name>"
+    },
+    {
+      "Sid":"PassRolesDefinition",
+      "Effect":"Allow",
+      "Action":[
+        "iam:PassRole"
+      ],
+      "Resource":[
+        "arn:aws:iam::<aws_account_id>:role/<function_execution_role_name>"
+      ]
     }
   ]
 }

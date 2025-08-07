@@ -13,7 +13,7 @@
 #    - Create a new role with Web Identity as the trusted entity
 #    - Select the OIDC provider you created above
 #    - For "Audience", enter "sts.amazonaws.com"
-#    - Add a condition to limit the role to your repository: 
+#    - Add a condition to limit the role to your repository:
 #      token.actions.githubusercontent.com:sub: repo:your-org/your-repo:*
 #    - Attach policies for Lambda and S3 permissions (Can be found on the README.md)
 #
@@ -23,7 +23,7 @@
 #    - LAMBDA_FUNCTION_NAME
 #    - LAMBDA_CODE_ARTIFACTS_DIR
 #    - LAMBDA_HANDLER
-#    - LAMBDA_RUNTIME 
+#    - LAMBDA_RUNTIME
 #
 # 4. Add any additional parameters under the environment variable section and Deploy Lambda Function step.
 #
@@ -47,6 +47,7 @@ env:
   LAMBDA_CODE_ARTIFACTS_DIR: MY_CODE_ARTIFACTS_DIR  # set this to the directory containing your Lambda code
   LAMBDA_HANDLER: MY_LAMBDA_HANDLER                 # set this to your Lambda handler
   LAMBDA_RUNTIME: MY_LAMBDA_RUNTIME                 # set this to your Lambda runtime
+  LAMBDA_EXECUTION_ROLE: MY_LAMBDA_EXECUTION_ROLE   # set this to your function's IAM execution role
   # Include additional parameters as needed (Format at LAMBDA_PARAMETER)
 
 permissions:
@@ -74,7 +75,8 @@ jobs:
       uses: aws-actions/aws-lambda-deploy@v1
       with:
         function-name: ${{ env.LAMBDA_FUNCTION_NAME }}
-        code-artifacts-dir: ${{ env.CODE_ARTIFACTS_DIR }}
+        code-artifacts-dir: ${{ env.LAMBDA_CODE_ARTIFACTS_DIR }}
         handler: ${{ env.LAMBDA_HANDLER }}
         runtime: ${{ env.LAMBDA_RUNTIME }}
+        role: ${{ env.LAMBDA_EXECUTION_ROLE }}
         # Add any additional inputs your action supports
