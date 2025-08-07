@@ -1,4 +1,4 @@
-# AWS Lambda Deploy Action for GitHub Actions
+# AWS Lambda Deploy GitHub Action
 
 Updates the code and configuration of AWS Lambda functions as part of GitHub Actions workflow steps.
 
@@ -251,11 +251,11 @@ If you're using the S3 deployment method, ensure your IAM role also has the foll
       "Sid": "S3Permissions",
       "Effect": "Allow",
       "Action": [
-        "s3:HeadBucket",
+        "s3:ListBucket",
         "s3:CreateBucket",
         "s3:PutObject",
-        "s3:PutPublicAccessBlock",
-        "s3:PutBucketEncryption",
+        "s3:PutBucketPublicAccessBlock",
+        "s3:PutEncryptionConfiguration",
         "s3:PutBucketVersioning"
       ],
       "Resource": [
