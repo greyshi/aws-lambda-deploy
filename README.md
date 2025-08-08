@@ -44,7 +44,7 @@ jobs:
       uses: actions/checkout@v4
 
     - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v3
+      uses: aws-actions/configure-aws-credentials@v4
       with:
         role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
         aws-region: ${{ env.AWS_REGION }}
@@ -184,7 +184,7 @@ Here's an example of using OIDC with the aws-actions/configure-aws-credentials a
 
 ```yaml
       - name: Configure AWS credentials with OIDC
-        uses: aws-actions/configure-aws-credentials@v2
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: my-role
           aws-region: my-region
