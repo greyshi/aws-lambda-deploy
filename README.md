@@ -1,6 +1,6 @@
 # AWS Lambda Deploy GitHub Action
 
-Updates the code and configuration of AWS Lambda functions as part of GitHub Actions workflow steps.
+Updates the code and configuration of AWS Lambda functions as part of GitHub Actions workflow steps. Supports both .zip file archives and container images stored in Amazon ECR.
 
 **Table of Contents**
 
@@ -103,6 +103,34 @@ Validate parameters and permissions without any function code or configuration m
           code-artifacts-dir: my-code-artifacts-dir
           dry-run: true
 ```
+
+### Container Image Deployment
+Deploy Lambda functions using container images from Amazon ECR. Build and push your Docker image to ECR, then deploy using the image URI.
+```yaml
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: my-lambda-repo
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+      - name: Deploy Lambda function with container image
+        uses: aws-actions/aws-lambda-deploy@v1
+        with:
+          function-name: my-container-function
+          package-type: Image
+          image-uri: ${{ steps.build-image.outputs.image }}
+          role: arn:aws:iam::123456789012:role/lambda-role
+          # Note: handler and runtime are not required for container images
+```
 ## Build from Source
 
 To automate building your source code, add a build step based on your runtime and build process. This build step should be performed before the AWS Lambda Deploy step, and AWS Lambda Deploy's `code-artifacts-dir` parameter will typically be set to the build step's code artifact output directory.
@@ -137,9 +165,11 @@ Below are two commonly used Build examples for Node.js and Python:
 | Name | Description | Required | Default |
 |------|-------------|----------|---------|
 | `function-name` | Name of the Lambda function | Yes | |
-| `code-artifacts-dir` | Path to a directory of code artifacts to zip and deploy | Yes | |
-| `handler` | Name of the function handler method | Yes | `index.handler` |
-| `runtime` | Function runtime identifier | Yes | `nodejs20.x` |
+| `package-type` | Package type of the Lambda function (`Zip` or `Image`) | No | `Zip` |
+| `image-uri` | URI of the container image in Amazon ECR (required when package-type is `Image`) | No | |
+| `code-artifacts-dir` | Path to a directory of code artifacts to zip and deploy (required when package-type is `Zip`) | No | |
+| `handler` | Name of the function handler method (required when package-type is `Zip`) | No | `index.handler` |
+| `runtime` | Function runtime identifier (required when package-type is `Zip`) | No | `nodejs20.x` |
 | `s3-bucket` | S3 bucket name for Lambda deployment package. Uses S3 deployment method if provided | No | |
 | `s3-key` | S3 key (path) for the Lambda deployment package | No | Auto-generated |
 | `publish` | Publish a new version of the function after updating | No | `true` |
