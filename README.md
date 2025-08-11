@@ -103,6 +103,7 @@ Validate parameters and permissions without any function code or configuration m
           code-artifacts-dir: my-code-artifacts-dir
           dry-run: true
 ```
+ **Note**: Dry run will still call `GetFunctionConfiguration` to check if the function exists and perform configuration diffs against what's currently deployed.
 ## Build from Source
 
 To automate building your source code, add a build step based on your runtime and build process. This build step should be performed before the AWS Lambda Deploy step, and AWS Lambda Deploy's `code-artifacts-dir` parameter will typically be set to the build step's code artifact output directory.
