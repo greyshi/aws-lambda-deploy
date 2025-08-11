@@ -37,13 +37,22 @@ describe('S3 Key Generation and Dry Run Tests', () => {
   });
 
   test('should log dry run message and fail when function does not exist', async () => {
+    const mockSend = jest.fn()
+      // checkFunctionExists - function does not exist (ResourceNotFoundException)
+      .mockRejectedValueOnce({ name: 'ResourceNotFoundException' });
+
+    const mockClient = { send: mockSend };
+    LambdaClient.mockImplementation(() => mockClient);
+
     validations.validateAllInputs = jest.fn().mockReturnValue({
       valid: true,
       functionName: 'test-function',
-      dryRun: true
+      parsedEnvironment: {},
+      dryRun: true,
+      codeArtifactsDir: './code'
     });
 
-    jest.spyOn(mainModule, 'checkFunctionExists').mockResolvedValue(false);
+    jest.spyOn(mainModule, 'packageCodeArtifacts').mockResolvedValue('/tmp/test.zip');
 
     await mainModule.run();
 
