@@ -62,6 +62,12 @@ function validateRequiredInputs() {
 
     handler = core.getInput('handler', { required: false }) || 'index.handler';
     runtime = core.getInput('runtime', { required: false }) || 'nodejs20.x';
+    
+    // Warn if Image-only parameters are provided with Zip package type
+    imageUri = core.getInput('image-uri', { required: false });
+    if (imageUri) {
+      core.warning('image-uri parameter is ignored when package-type is "Zip"');
+    }
 
   } else if (packageType === 'Image') {
     // For Image packages, require image-uri
@@ -75,8 +81,11 @@ function validateRequiredInputs() {
     handler = core.getInput('handler', { required: false });
     runtime = core.getInput('runtime', { required: false });
 
-    // code-artifacts-dir is not needed for container images
+    // Warn if Zip-only parameters are provided with Image package type
     codeArtifactsDir = core.getInput('code-artifacts-dir', { required: false });
+    if (codeArtifactsDir) {
+      core.warning('code-artifacts-dir parameter is ignored when package-type is "Image"');
+    }
   }
 
   return {
@@ -317,6 +326,24 @@ function validateAndResolvePath(userPath, basePath) {
   return resolvedPath;
 }
 
+function checkInputConflicts(packageType, additionalInputs) {
+  const { s3Bucket, s3Key, useS3Method } = additionalInputs;
+  const sourceKmsKeyArn = core.getInput('source-kms-key-arn', { required: false });
+  
+  if (packageType === 'Image') {
+    // Warn about S3-related parameters being ignored for Image package type
+    if (s3Bucket) {
+      core.warning('s3-bucket parameter is ignored when package-type is "Image"');
+    }
+    if (s3Key) {
+      core.warning('s3-key parameter is ignored when package-type is "Image"');
+    }
+    if (sourceKmsKeyArn) {
+      core.warning('source-kms-key-arn parameter is ignored when package-type is "Image"');
+    }
+  }
+}
+
 function validateAllInputs() {
   const requiredInputs = validateRequiredInputs();
   if (!requiredInputs.valid) {
@@ -339,6 +366,11 @@ function validateAllInputs() {
   }
 
   const additionalInputs = getAdditionalInputs();
+  
+  // Check for input conflicts based on package type
+  if (requiredInputs.packageType) {
+    checkInputConflicts(requiredInputs.packageType, additionalInputs);
+  }
 
   return {
     valid: true,

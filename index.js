@@ -92,6 +92,12 @@ async function run() {
     const configCommand = new GetFunctionConfigurationCommand({FunctionName: functionName});
     let currentConfig = await client.send(configCommand);
 
+    // Check if package type is being changed (not supported by AWS)
+    if (currentConfig.PackageType && currentConfig.PackageType !== packageType) {
+      core.setFailed(`Cannot change package type of existing Lambda function from ${currentConfig.PackageType} to ${packageType}`);
+      return;
+    }
+
     const configChanged = hasConfigurationChanged(currentConfig, {
       ...(role && { Role: role }),
       ...(handler && { Handler: handler }),
